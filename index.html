@@ -122,28 +122,23 @@
   }
 
   .modalBack {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.85);
-  display: none;
-  pointer-events: auto;
-
-  overflow-y: auto; /* allows scrolling if needed */
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.72);
+    display: none;
+    pointer-events: auto;
   }
 
-.modal {
-  position: relative;
-  margin: 40px auto;
-  width: min(900px, 95%);
-  
-  border: 1px solid var(--line);
-  background: rgba(0, 0, 0, 0.92);
-  padding: 18px;
-
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
+  .modal {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(720px, calc(100% - 28px));
+    border: 1px solid var(--line);
+    background: rgba(0, 0, 0, 0.90);
+    padding: 14px;
+  }
 
   .modalHeader {
     display: flex;
@@ -167,12 +162,16 @@
     color: var(--muted);
   }
 
-  .docText {
-    white-space: pre-wrap;
-    line-height: 1.55;
-    font-size: 14px;
-    color: var(--text);
-  }
+.docText {
+  white-space: pre-wrap;
+  line-height: 1.55;
+  font-size: 14px;
+  color: var(--text);
+
+  max-height: 60vh;     /* limits height */
+  overflow-y: auto;     /* enables vertical scrolling */
+  padding-right: 6px;   /* prevents text from touching scrollbar */
+}
 
   .docFooter {
     margin-top: 10px;
@@ -325,19 +324,36 @@
   const modalBody = $("modalBody");
   const modalFooter = $("modalFooter");
 
-function openModal(title, body, footerLeft="", footerRight="") {
-  modalTitle.textContent = title;
+  function openModal(title, body, footerLeft="", footerRight="", showImage=false) {
+    modalTitle.textContent = title;
+    modalBody.textContent = body;
 
-  // Add text + image placeholder
-  modalBody.innerHTML = `
-    <div style="white-space: pre-wrap;">${body}</div>
-    
-    <div style="margin-top: 16px; text-align: center;">
-      <img src="IMG_20260330_185158.jpg" 
-           alt="Document Image"
-           style="max-width: 100%; border: 1px solid rgba(140,255,205,0.4);">
-    </div>
-  `;
+    // Only show the location photo on the final unlock — not on slip reads
+    const existingImg = modalBody.querySelector(".locationReveal");
+    if (existingImg) existingImg.remove();
+
+    if (showImage) {
+      const wrap = document.createElement("div");
+      wrap.className = "locationReveal";
+      wrap.style.cssText = "margin-top:16px;border-top:1px dashed rgba(140,255,205,0.25);padding-top:14px;";
+
+      wrap.innerHTML = `
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:rgba(220,255,244,0.55);margin-bottom:8px;">
+          Next Location — Physical Clue
+        </div>
+        <div style="position:relative;width:100%;aspect-ratio:16/9;border:1px dashed rgba(140,255,205,0.25);background:repeating-linear-gradient(45deg,rgba(140,255,205,0.02),rgba(140,255,205,0.02) 1px,transparent 1px,transparent 14px);display:grid;place-items:center;overflow:hidden;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:rgba(220,255,244,0.45);text-align:center;padding:10px;">
+<div style="position:relative;width:100%;aspect-ratio:16/9;border:1px dashed rgba(140,255,205,0.25);overflow:hidden;">
+  <img src="CARRRRP.jpg" alt="Location Photograph"
+       style="width:100%;height:100%;object-fit:cover;display:block;" />
+</div>
+        </div>
+        <div style="margin-top:8px;font-size:11px;color:rgba(220,255,244,0.45);text-transform:uppercase;letter-spacing:0.4px;">
+          A physical slip of paper is hidden at this location. Find it to continue.
+        </div>
+      `;
+      modalBody.appendChild(wrap);
+    }
+
     if (footerLeft || footerRight) {
       modalFooter.style.display = "flex";
       modalFooter.innerHTML = `<div>${footerLeft}</div><div>${footerRight}</div>`;
@@ -501,7 +517,8 @@ function openModal(title, body, footerLeft="", footerRight="") {
           "",
           "The tunnel ends in money.",
           "But the secret comes first."
-        ].join("\n")
+        ].join("\n"),
+        "", "", true   // showImage: only on unlock success
       );
     } else {
       lockStatus.style.color = "var(--bad)";
