@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
 <title>PUZZLE 2 // SEARCH FLOOR</title>
 <style>
   :root{
     --bg: #061016;
-    --panel: rgba(3, 7, 10, 0.74);
+    --panel: rgba(3, 7, 10, 0.82);
     --line: rgba(140, 255, 205, 0.42);
     --text: rgba(220, 255, 244, 0.92);
     --muted: rgba(220, 255, 244, 0.68);
@@ -16,20 +16,27 @@
     --bad: rgba(255, 120, 140, 0.95);
   }
 
+  *, *::before, *::after { box-sizing: border-box; }
+
   html, body {
     margin: 0;
     height: 100%;
+    width: 100%;
     font-family: "Courier New", Courier, monospace;
     background: var(--bg);
     color: var(--text);
     overflow: hidden;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
   }
 
   canvas {
     display: block;
+    position: fixed;
+    top: 0; left: 0;
     width: 100vw;
     height: 100vh;
-    image-rendering: pixelated;
   }
 
   #ui {
@@ -41,105 +48,165 @@
   .panel {
     border: 1px solid var(--line);
     background: var(--panel);
-    padding: 12px;
+    padding: 10px 12px;
     box-shadow: 0 0 0 1px rgba(0,0,0,0.45) inset;
   }
 
-  .frame {
+  /* ── Top info bar (replaces side frame on mobile) ── */
+  #topBar {
     position: absolute;
-    top: 14px;
-    left: 14px;
-    width: min(420px, calc(100% - 28px));
-  }
-
-  .title {
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    font-size: 13px;
-    margin: 0 0 8px 0;
-  }
-
-  .small {
-    font-size: 12px;
+    top: 0; left: 0; right: 0;
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel);
+    padding: 8px 12px;
+    font-size: 11px;
     color: var(--muted);
-    line-height: 1.4;
+    align-items: center;
+    justify-content: space-between;
+    pointer-events: none;
   }
-
-  .kbd {
-    display: inline-block;
-    border: 1px solid var(--line);
-    padding: 0 6px;
-    line-height: 18px;
-    height: 18px;
-    margin: 0 2px;
+  #topBar .title {
     font-size: 12px;
     color: var(--text);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  #topBar .hint {
+    font-size: 10px;
+    color: var(--muted);
   }
 
+  /* ── Padlock panel ── */
   #padlockPanel {
     position: absolute;
-    right: 14px;
-    top: 14px;
-    width: min(420px, calc(100% - 28px));
+    top: 42px; right: 0; left: 0;
     pointer-events: auto;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel);
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
   }
-
+  #padlockPanel .title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+    margin: 0;
+  }
   .padRow {
     display: grid;
     grid-template-columns: 1fr auto;
-    gap: 10px;
+    gap: 8px;
     align-items: center;
-    margin-top: 10px;
   }
-
   input[type="text"]{
     width: 100%;
     font: inherit;
-    padding: 10px 12px;
+    padding: 8px 10px;
     border: 1px solid var(--line);
     background: transparent;
     color: var(--text);
     outline: none;
+    font-size: 16px; /* prevents iOS zoom */
+    -webkit-user-select: auto;
+    user-select: auto;
   }
-
   button {
     font: inherit;
-    padding: 10px 12px;
+    padding: 8px 12px;
     border: 1px solid var(--line);
     background: transparent;
     color: var(--text);
     cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
   button:active { transform: translateY(1px); }
-
   .status {
-    margin-top: 10px;
-    min-height: 18px;
-    font-size: 12px;
+    min-height: 14px;
+    font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.4px;
     color: var(--muted);
   }
 
+  /* ── Joystick (bottom-left) ── */
+  #joystickZone {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    width: 110px;
+    height: 110px;
+    pointer-events: auto;
+    touch-action: none;
+  }
+  #joystickBase {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: rgba(140,255,205,0.06);
+    position: relative;
+  }
+  #joystickThumb {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: rgba(140,255,205,0.18);
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    pointer-events: none;
+  }
+
+  /* ── Interact button (bottom-right) ── */
+  #interactBtn {
+    position: absolute;
+    bottom: 30px;
+    right: 24px;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: rgba(255,210,130,0.10);
+    color: var(--accent);
+    font-family: "Courier New", Courier, monospace;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    cursor: pointer;
+  }
+  #interactBtn.lit {
+    background: rgba(255,210,130,0.22);
+    border-color: var(--accent);
+  }
+
+  /* ── Modal ── */
   .modalBack {
     position: absolute;
     inset: 0;
-    background: rgba(0,0,0,0.72);
+    background: rgba(0,0,0,0.78);
     display: none;
     pointer-events: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
-
   .modal {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: min(720px, calc(100% - 28px));
+    margin: 60px auto 20px;
+    width: min(680px, calc(100% - 20px));
     border: 1px solid var(--line);
-    background: rgba(0, 0, 0, 0.90);
+    background: rgba(0, 0, 0, 0.92);
     padding: 14px;
   }
-
   .modalHeader {
     display: flex;
     justify-content: space-between;
@@ -149,30 +216,23 @@
     padding-bottom: 10px;
     margin-bottom: 10px;
   }
-
   .modalHeader .h {
     margin: 0;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     font-size: 13px;
   }
-
   .modalHeader .x {
     font-size: 12px;
     color: var(--muted);
   }
-
-.docText {
-  white-space: pre-wrap;
-  line-height: 1.55;
-  font-size: 14px;
-  color: var(--text);
-
-  max-height: 60vh;     /* limits height */
-  overflow-y: auto;     /* enables vertical scrolling */
-  padding-right: 6px;   /* prevents text from touching scrollbar */
-}
-
+  .docText {
+    white-space: pre-wrap;
+    line-height: 1.55;
+    font-size: 14px;
+    color: var(--text);
+    padding-right: 4px;
+  }
   .docFooter {
     margin-top: 10px;
     border-top: 1px dashed rgba(140,255,205,0.25);
@@ -181,6 +241,22 @@
     color: var(--muted);
     display: flex;
     justify-content: space-between;
+  }
+  #closeModalBtn {
+    display: block;
+    width: 100%;
+    margin-top: 14px;
+    padding: 10px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--muted);
+    font-family: "Courier New", Courier, monospace;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
 
   #scan {
@@ -197,59 +273,56 @@
     opacity: 0.35;
     mix-blend-mode: overlay;
   }
-
-  @media (prefers-reduced-motion: no-preference) {
-    #scan { animation: flicker 3.2s infinite; }
-    @keyframes flicker {
-      0%, 100% { opacity: 0.18; }
-      45% { opacity: 0.38; }
-      52% { opacity: 0.12; }
-      70% { opacity: 0.33; }
-    }
-  }
 </style>
 </head>
 
 <body>
-<canvas id="game" width="960" height="540"></canvas>
+<canvas id="game"></canvas>
 <div id="scan"></div>
 
 <div id="ui">
-  <div class="frame panel">
-    <p class="title">SEARCH FLOOR // ABANDONED LAB</p>
-    <div class="small">
-      Move: <span class="kbd">W</span><span class="kbd">A</span><span class="kbd">S</span><span class="kbd">D</span>
-      &nbsp;&nbsp;Read: <span class="kbd">E</span>
-      &nbsp;&nbsp;Close: <span class="kbd">ESC</span><br/>
-      The slips are here. They’re not easy to see.
-    </div>
+  <div id="topBar">
+    <span class="title">SEARCH FLOOR // ABANDONED LAB</span>
+    <span class="hint">Move with stick &bull; Tap [READ] near slips</span>
   </div>
 
-  <div id="padlockPanel" class="panel">
-    <p class="title">PADLOCK</p>
-    <div class="small">Enter the 4-digit code.</div>
+  <div id="padlockPanel">
+    <p class="title">PADLOCK — Enter 4-digit code</p>
     <div class="padRow">
-      <input id="codeInput" type="text" inputmode="numeric" autocomplete="off" maxlength="4" placeholder="____" />
+      <input id="codeInput" type="text" inputmode="numeric" autocomplete="off"
+             maxlength="4" placeholder="____" />
       <button id="unlockBtn">UNLOCK</button>
     </div>
     <div id="lockStatus" class="status"></div>
   </div>
 
+  <!-- Joystick -->
+  <div id="joystickZone">
+    <div id="joystickBase">
+      <div id="joystickThumb"></div>
+    </div>
+  </div>
+
+  <!-- Interact button -->
+  <button id="interactBtn" aria-label="Read nearby slip">READ</button>
+
+  <!-- Modal -->
   <div id="modalBack" class="modalBack" aria-hidden="true">
     <div class="modal" role="dialog" aria-modal="true">
       <div class="modalHeader">
         <p class="h" id="modalTitle">DOCUMENT</p>
-        <div class="x">Press <span class="kbd">ESC</span> to close</div>
+        <div class="x">Tap CLOSE to dismiss</div>
       </div>
       <div id="modalBody" class="docText"></div>
       <div id="modalFooter" class="docFooter" style="display:none;"></div>
+      <button id="closeModalBtn">[ CLOSE ]</button>
     </div>
   </div>
 </div>
 
 <script>
 (() => {
-  const $ = (id) => document.getElementById(id);
+  const $ = id => document.getElementById(id);
 
   const ORDINAL_TO_DIGIT = {
     "FIRST":"1","SECOND":"2","THIRD":"3","FOURTH":"4",
@@ -259,76 +332,79 @@
   const canvas = $("game");
   const ctx = canvas.getContext("2d");
 
-  const VIEW_W = canvas.width;
-  const VIEW_H = canvas.height;
+  // Native resolution for the world
+  const VIEW_W = 960, VIEW_H = 540;
+  const WORLD_W = 2200, WORLD_H = 1400;
 
-  const WORLD_W = 2200;
-  const WORLD_H = 1400;
+  canvas.width  = VIEW_W;
+  canvas.height = VIEW_H;
 
-  const player = { x: 180, y: 180, r: 10, speed: 2.4 };
+  // Scale canvas to fill the screen
+  function resizeCanvas() {
+    const sw = window.innerWidth, sh = window.innerHeight;
+    const scale = Math.min(sw / VIEW_W, sh / VIEW_H);
+    canvas.style.width  = (VIEW_W  * scale) + "px";
+    canvas.style.height = (VIEW_H * scale) + "px";
+    canvas.style.left   = ((sw - VIEW_W  * scale) / 2) + "px";
+    canvas.style.top    = ((sh - VIEW_H * scale) / 2) + "px";
+  }
+  window.addEventListener("resize", resizeCanvas);
+  resizeCanvas();
+
+  const player = { x: 180, y: 180, r: 10, speed: 2.6 };
   const cam = { x: 0, y: 0 };
 
   const keys = new Set();
   let paused = false;
 
-  function clamp(v,a,b){ return Math.max(a, Math.min(b,v)); }
-  function dist2(ax, ay, bx, by){ const dx=ax-bx, dy=ay-by; return dx*dx+dy*dy; }
+  // Virtual joystick state
+  const joy = { active: false, id: null, cx: 0, cy: 0, dx: 0, dy: 0 };
 
-  // Obstacles
+  function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+  function dist2(ax,ay,bx,by){ const dx=ax-bx,dy=ay-by; return dx*dx+dy*dy; }
+
+  // ── Obstacles ──────────────────────────────────────────
   const obstacles = [
-    { x: 240, y: 220, w: 520, h: 40 },
-    { x: 240, y: 320, w: 520, h: 40 },
-    { x: 240, y: 420, w: 520, h: 40 },
-    { x: 980, y: 220, w: 680, h: 44 },
-    { x: 980, y: 340, w: 680, h: 44 },
-    { x: 980, y: 460, w: 680, h: 44 },
-
-    { x: 420, y: 720, w: 120, h: 120 },
-    { x: 590, y: 740, w: 140, h: 160 },
-    { x: 820, y: 760, w: 120, h: 120 },
-
-    { x: 1360, y: 820, w: 180, h: 180 },
-    { x: 1620, y: 860, w: 140, h: 140 },
-
-    { x: 1800, y: 220, w: 120, h: 320 },
-    { x: 1940, y: 220, w: 120, h: 320 },
-
-    { x: 240, y: 1040, w: 420, h: 70 },
-    { x: 760, y: 1040, w: 420, h: 70 },
+    { x:240,y:220,w:520,h:40 },
+    { x:240,y:320,w:520,h:40 },
+    { x:240,y:420,w:520,h:40 },
+    { x:980,y:220,w:680,h:44 },
+    { x:980,y:340,w:680,h:44 },
+    { x:980,y:460,w:680,h:44 },
+    { x:420,y:720,w:120,h:120 },
+    { x:590,y:740,w:140,h:160 },
+    { x:820,y:760,w:120,h:120 },
+    { x:1360,y:820,w:180,h:180 },
+    { x:1620,y:860,w:140,h:140 },
+    { x:1800,y:220,w:120,h:320 },
+    { x:1940,y:220,w:120,h:320 },
+    { x:240,y:1040,w:420,h:70 },
+    { x:760,y:1040,w:420,h:70 },
   ];
 
-  // Papers moved to reachable positions (not behind shelves / not inside clutter)
   const papers = [
-    // in an aisle endcap (reachable)
-    { id:"p1", x: 760,  y: 390, ordinal:"SECOND", posIndex:3,
-      sentence:"This is the SECOND day of testing.", logged:false },
-
-    // near front of the right shelf row (reachable)
-    { id:"p2", x: 980,  y: 520, ordinal:"FOURTH", posIndex:1,
-      sentence:"A FOURTH checksum passed. Nothing else did.", logged:false },
-
-    // near server racks but not trapped (reachable)
-    { id:"p3", x: 1765, y: 560, ordinal:"FIRST",  posIndex:2,
-      sentence:"He said the FIRST rule was to read beginnings.", logged:false },
-
-    // next to table corner (reachable)
-    { id:"p4", x: 720,  y: 1005, ordinal:"THIRD",  posIndex:4,
-      sentence:"The THIRD door was open when I arrived.", logged:false },
+    { id:"p1",x:760, y:390, ordinal:"SECOND",posIndex:3,
+      sentence:"This is the SECOND day of testing.",logged:false },
+    { id:"p2",x:980, y:520, ordinal:"FOURTH",posIndex:1,
+      sentence:"A FOURTH checksum passed. Nothing else did.",logged:false },
+    { id:"p3",x:1765,y:560, ordinal:"FIRST", posIndex:2,
+      sentence:"He said the FIRST rule was to read beginnings.",logged:false },
+    { id:"p4",x:720, y:1005,ordinal:"THIRD", posIndex:4,
+      sentence:"The THIRD door was open when I arrived.",logged:false },
   ];
 
-  const found = { 1:null,2:null,3:null,4:null };
+  const found = {1:null,2:null,3:null,4:null};
 
-  // ---------- Modal ----------
-  const modalBack = $("modalBack");
+  // ── Modal ───────────────────────────────────────────────
+  const modalBack  = $("modalBack");
   const modalTitle = $("modalTitle");
-  const modalBody = $("modalBody");
-  const modalFooter = $("modalFooter");
+  const modalBody  = $("modalBody");
+  const modalFooter= $("modalFooter");
 
   function openModal(title, body, footerLeft="", footerRight="", showImage=false) {
     modalTitle.textContent = title;
-    modalBody.textContent = body;
+    modalBody.textContent  = body;
 
-    // Only show the location photo on the final unlock — not on slip reads
     const existingImg = modalBody.querySelector(".locationReveal");
     if (existingImg) existingImg.remove();
 
@@ -336,21 +412,17 @@
       const wrap = document.createElement("div");
       wrap.className = "locationReveal";
       wrap.style.cssText = "margin-top:16px;border-top:1px dashed rgba(140,255,205,0.25);padding-top:14px;";
-
       wrap.innerHTML = `
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:rgba(220,255,244,0.55);margin-bottom:8px;">
           Next Location — Physical Clue
         </div>
-        <div style="position:relative;width:100%;aspect-ratio:16/9;border:1px dashed rgba(140,255,205,0.25);background:repeating-linear-gradient(45deg,rgba(140,255,205,0.02),rgba(140,255,205,0.02) 1px,transparent 1px,transparent 14px);display:grid;place-items:center;overflow:hidden;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:rgba(220,255,244,0.45);text-align:center;padding:10px;">
-<div style="position:relative;width:100%;aspect-ratio:16/9;border:1px dashed rgba(140,255,205,0.25);overflow:hidden;">
-  <img src="CARRRRP.jpg" alt="Location Photograph"
-       style="width:100%;height:100%;object-fit:cover;display:block;" />
-</div>
+        <div style="position:relative;width:100%;aspect-ratio:16/9;border:1px dashed rgba(140,255,205,0.25);overflow:hidden;">
+          <img src="CARRRRP.jpg" alt="Location Photograph"
+               style="width:100%;height:100%;object-fit:cover;display:block;" />
         </div>
         <div style="margin-top:8px;font-size:11px;color:rgba(220,255,244,0.45);text-transform:uppercase;letter-spacing:0.4px;">
           A physical slip of paper is hidden at this location. Find it to continue.
-        </div>
-      `;
+        </div>`;
       modalBody.appendChild(wrap);
     }
 
@@ -362,136 +434,176 @@
       modalFooter.innerHTML = "";
     }
     modalBack.style.display = "block";
-    modalBack.setAttribute("aria-hidden", "false");
+    modalBack.setAttribute("aria-hidden","false");
+    modalBack.scrollTop = 0;
     paused = true;
   }
+
   function closeModal() {
     modalBack.style.display = "none";
-    modalBack.setAttribute("aria-hidden", "true");
+    modalBack.setAttribute("aria-hidden","true");
     paused = false;
   }
 
-  // ---------- Input ----------
-  window.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      if (modalBack.style.display === "block") closeModal();
-      return;
-    }
+  $("closeModalBtn").addEventListener("click", closeModal);
+  $("closeModalBtn").addEventListener("touchend", e => { e.preventDefault(); closeModal(); });
+
+  // Close on backdrop tap (but not on modal content)
+  modalBack.addEventListener("click", e => { if (e.target === modalBack) closeModal(); });
+
+  // ── Keyboard (desktop fallback) ─────────────────────────
+  window.addEventListener("keydown", e => {
+    if (e.key === "Escape") { if (modalBack.style.display === "block") closeModal(); return; }
     keys.add(e.key.toLowerCase());
     if (["w","a","s","d"].includes(e.key.toLowerCase())) e.preventDefault();
   });
-  window.addEventListener("keyup", (e) => keys.delete(e.key.toLowerCase()));
+  window.addEventListener("keyup", e => keys.delete(e.key.toLowerCase()));
 
-  // ---------- Collision (push-out resolver prevents sticking) ----------
-  function resolveCircleRect(cx, cy, r, rx, ry, rw, rh) {
-    // nearest point on rect
-    const nx = clamp(cx, rx, rx + rw);
-    const ny = clamp(cy, ry, ry + rh);
+  // ── Joystick touch ──────────────────────────────────────
+  const jZone = $("joystickZone");
+  const jThumb = $("joystickThumb");
+  const JRADIUS = 35; // max thumb travel
 
-    let dx = cx - nx;
-    let dy = cy - ny;
-    const d2 = dx*dx + dy*dy;
-
-    if (d2 >= r*r) return { x: cx, y: cy, hit: false };
-
-    // If exactly on edge/corner, pick a stable push direction
-    if (d2 === 0) {
-      // push out based on which side is closer
-      const left = Math.abs(cx - rx);
-      const right = Math.abs((rx + rw) - cx);
-      const top = Math.abs(cy - ry);
-      const bottom = Math.abs((ry + rh) - cy);
-      const m = Math.min(left, right, top, bottom);
-      if (m === left) dx = -1, dy = 0;
-      else if (m === right) dx = 1, dy = 0;
-      else if (m === top) dx = 0, dy = -1;
-      else dx = 0, dy = 1;
-    }
-
-    const d = Math.sqrt(dx*dx + dy*dy);
-    const push = (r - d) + 0.01; // tiny bias prevents re-collision jitter
-    const px = (dx / d) * push;
-    const py = (dy / d) * push;
-
-    return { x: cx + px, y: cy + py, hit: true };
+  function getZoneCenter() {
+    const r = jZone.getBoundingClientRect();
+    return { cx: r.left + r.width/2, cy: r.top + r.height/2 };
   }
 
-  function moveAndCollide(dx, dy) {
-    // first apply movement + bounds
-    let nx = clamp(player.x + dx, player.r, WORLD_W - player.r);
-    let ny = clamp(player.y + dy, player.r, WORLD_H - player.r);
+  jZone.addEventListener("touchstart", e => {
+    e.preventDefault();
+    const t = e.changedTouches[0];
+    const {cx,cy} = getZoneCenter();
+    joy.active = true;
+    joy.id = t.identifier;
+    joy.cx = cx; joy.cy = cy;
+    updateJoyPos(t.clientX, t.clientY);
+  }, { passive:false });
 
-    // iterative push-out against obstacles (prevents corner sticking)
-    for (let iter = 0; iter < 4; iter++) {
-      let any = false;
-      for (const o of obstacles) {
-        const res = resolveCircleRect(nx, ny, player.r, o.x, o.y, o.w, o.h);
-        if (res.hit) {
-          nx = res.x; ny = res.y;
-          any = true;
-        }
+  document.addEventListener("touchmove", e => {
+    if (!joy.active) return;
+    for (const t of e.changedTouches) {
+      if (t.identifier === joy.id) {
+        e.preventDefault();
+        updateJoyPos(t.clientX, t.clientY);
       }
-      if (!any) break;
     }
+  }, { passive:false });
 
-    player.x = nx;
-    player.y = ny;
+  document.addEventListener("touchend", e => {
+    for (const t of e.changedTouches) {
+      if (t.identifier === joy.id) {
+        joy.active = false;
+        joy.dx = 0; joy.dy = 0;
+        jThumb.style.transform = "translate(-50%,-50%)";
+      }
+    }
+  });
+
+  function updateJoyPos(cx, cy) {
+    let dx = cx - joy.cx;
+    let dy = cy - joy.cy;
+    const dist = Math.hypot(dx, dy);
+    if (dist > JRADIUS) { dx = dx/dist*JRADIUS; dy = dy/dist*JRADIUS; }
+    joy.dx = dx / JRADIUS;
+    joy.dy = dy / JRADIUS;
+    jThumb.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
   }
 
-  // ---------- Interaction ----------
+  // ── Interact button ─────────────────────────────────────
+  const interactBtn = $("interactBtn");
+  let interactLatch = false;
+
+  function doInteract() {
+    if (paused) return;
+    const p = nearestPaperInRange();
+    if (!p) return;
+    if (!p.logged) {
+      const digit = ORDINAL_TO_DIGIT[p.ordinal] ?? "?";
+      found[p.posIndex] = digit;
+      p.logged = true;
+    }
+    openModal("SLIP OF PAPER", p.sentence, p.logged ? "LOGGED." : "…", `(${p.posIndex})`);
+  }
+
+  interactBtn.addEventListener("touchstart", e => {
+    e.preventDefault();
+    if (!interactLatch) { interactLatch = true; doInteract(); }
+  }, { passive:false });
+  interactBtn.addEventListener("touchend", e => { e.preventDefault(); interactLatch = false; });
+  interactBtn.addEventListener("click", doInteract);
+
+  // ── Keyboard E interact ─────────────────────────────────
+  let eLatch = false;
+  function handleKeyInteract() {
+    const wantE = keys.has("e");
+    if (wantE && !eLatch && !paused) { eLatch = true; doInteract(); }
+    if (!wantE) eLatch = false;
+  }
+
+  // ── Collision ───────────────────────────────────────────
+  function resolveCircleRect(cx,cy,r,rx,ry,rw,rh) {
+    const nx = clamp(cx,rx,rx+rw), ny = clamp(cy,ry,ry+rh);
+    let dx=cx-nx, dy=cy-ny;
+    const d2=dx*dx+dy*dy;
+    if (d2>=r*r) return {x:cx,y:cy,hit:false};
+    if (d2===0){
+      const left=Math.abs(cx-rx),right=Math.abs((rx+rw)-cx),
+            top=Math.abs(cy-ry),bot=Math.abs((ry+rh)-cy);
+      const m=Math.min(left,right,top,bot);
+      if(m===left)dx=-1,dy=0;
+      else if(m===right)dx=1,dy=0;
+      else if(m===top)dx=0,dy=-1;
+      else dx=0,dy=1;
+    }
+    const d=Math.sqrt(dx*dx+dy*dy);
+    const push=(r-d)+0.01;
+    return {x:cx+(dx/d)*push,y:cy+(dy/d)*push,hit:true};
+  }
+
+  function moveAndCollide(dx,dy) {
+    let nx=clamp(player.x+dx,player.r,WORLD_W-player.r);
+    let ny=clamp(player.y+dy,player.r,WORLD_H-player.r);
+    for (let iter=0;iter<4;iter++){
+      let any=false;
+      for (const o of obstacles){
+        const res=resolveCircleRect(nx,ny,player.r,o.x,o.y,o.w,o.h);
+        if(res.hit){nx=res.x;ny=res.y;any=true;}
+      }
+      if(!any)break;
+    }
+    player.x=nx; player.y=ny;
+  }
+
+  // ── Interaction range ───────────────────────────────────
   function nearestPaperInRange() {
-    // tight range => must get close (and cannot read through shelves)
-    const RANGE2 = 20 * 20;
-    let best = null, bestD = Infinity;
-    for (const p of papers) {
-      const d = dist2(player.x, player.y, p.x, p.y);
-      if (d < RANGE2 && d < bestD) { best = p; bestD = d; }
+    const RANGE2 = 20*20;
+    let best=null,bestD=Infinity;
+    for (const p of papers){
+      const d=dist2(player.x,player.y,p.x,p.y);
+      if(d<RANGE2&&d<bestD){best=p;bestD=d;}
     }
     return best;
   }
 
-  let eLatch = false;
-  function handleInteract() {
-    const wantE = keys.has("e");
-    if (wantE && !eLatch && !paused) {
-      eLatch = true;
-      const p = nearestPaperInRange();
-      if (!p) return;
-
-      if (!p.logged) {
-        const digit = ORDINAL_TO_DIGIT[p.ordinal] ?? "?";
-        found[p.posIndex] = digit;
-        p.logged = true;
-      }
-
-      openModal("SLIP OF PAPER", p.sentence, p.logged ? "LOGGED." : "…", `(${p.posIndex})`);
-    }
-    if (!wantE) eLatch = false;
-  }
-
-  // ---------- Padlock ----------
+  // ── Padlock ─────────────────────────────────────────────
   const codeInput = $("codeInput");
-  const unlockBtn = $("unlockBtn");
   const lockStatus = $("lockStatus");
+  const correctCode = "4123";
 
   function sanitizeCode(s){ return (s||"").replace(/\D/g,"").slice(0,4); }
   codeInput.addEventListener("input", () => codeInput.value = sanitizeCode(codeInput.value));
-
-  const correctCode = "4123";
 
   function tryUnlock() {
     const entered = sanitizeCode(codeInput.value);
     if (entered.length < 4) {
       lockStatus.style.color = "var(--muted)";
-      lockStatus.textContent = "STATUS: INCOMPLETE.";
-      return;
+      lockStatus.textContent = "STATUS: INCOMPLETE."; return;
     }
     if (entered === correctCode) {
       lockStatus.style.color = "var(--ok)";
       lockStatus.textContent = "STATUS: ACCEPTED.";
       codeInput.disabled = true;
-      unlockBtn.disabled = true;
-
+      $("unlockBtn").disabled = true;
       openModal(
         "JOURNAL // ENTRY 17 (RECOVERED)",
         [
@@ -518,130 +630,125 @@
           "The tunnel ends in money.",
           "But the secret comes first."
         ].join("\n"),
-        "", "", true   // showImage: only on unlock success
+        "","",true
       );
     } else {
       lockStatus.style.color = "var(--bad)";
       lockStatus.textContent = "STATUS: REJECTED.";
     }
   }
-  unlockBtn.addEventListener("click", tryUnlock);
-  codeInput.addEventListener("keydown", (e) => { if (e.key === "Enter") tryUnlock(); });
+  $("unlockBtn").addEventListener("click", tryUnlock);
+  codeInput.addEventListener("keydown", e => { if(e.key==="Enter") tryUnlock(); });
 
-  // ---------- Camera ----------
+  // ── Camera ───────────────────────────────────────────────
   function updateCamera() {
     cam.x = clamp(player.x - VIEW_W/2, 0, WORLD_W - VIEW_W);
     cam.y = clamp(player.y - VIEW_H/2, 0, WORLD_H - VIEW_H);
   }
-  function worldToView(wx, wy) { return { x: wx - cam.x, y: wy - cam.y }; }
+  function worldToView(wx,wy){ return {x:wx-cam.x,y:wy-cam.y}; }
 
-  // ---------- Draw ----------
+  // ── Draw ─────────────────────────────────────────────────
   function drawBackground() {
     ctx.fillStyle = "#061016";
     ctx.fillRect(0,0,VIEW_W,VIEW_H);
-
     ctx.strokeStyle = "rgba(140,255,205,0.05)";
-    for (let x = -(cam.x % 48); x < VIEW_W; x += 48) {
-      ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,VIEW_H); ctx.stroke();
+    for (let x=-(cam.x%48);x<VIEW_W;x+=48){
+      ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,VIEW_H);ctx.stroke();
     }
-    for (let y = -(cam.y % 48); y < VIEW_H; y += 48) {
-      ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(VIEW_W,y); ctx.stroke();
+    for (let y=-(cam.y%48);y<VIEW_H;y+=48){
+      ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(VIEW_W,y);ctx.stroke();
     }
   }
 
   function drawObstacles() {
-    for (const o of obstacles) {
-      const v = worldToView(o.x, o.y);
-      ctx.fillStyle = "rgba(12, 26, 26, 0.92)";
-      ctx.fillRect(v.x, v.y, o.w, o.h);
-      ctx.strokeStyle = "rgba(140,255,205,0.28)";
-      ctx.strokeRect(v.x, v.y, o.w, o.h);
-
-      ctx.fillStyle = "rgba(255,210,130,0.08)";
-      ctx.fillRect(v.x + 6, v.y + 6, Math.min(42, o.w - 12), 4);
+    for (const o of obstacles){
+      const v=worldToView(o.x,o.y);
+      ctx.fillStyle="rgba(12,26,26,0.92)";
+      ctx.fillRect(v.x,v.y,o.w,o.h);
+      ctx.strokeStyle="rgba(140,255,205,0.28)";
+      ctx.strokeRect(v.x,v.y,o.w,o.h);
+      ctx.fillStyle="rgba(255,210,130,0.08)";
+      ctx.fillRect(v.x+6,v.y+6,Math.min(42,o.w-12),4);
     }
   }
 
   function drawPapers() {
-    for (const p of papers) {
-      const v = worldToView(p.x, p.y);
-      const w = 10, h = 8;
-      const x = v.x - w/2, y = v.y - h/2;
-
-      ctx.fillStyle = p.logged ? "rgba(245,245,235,0.35)" : "rgba(245,245,235,0.55)";
-      ctx.fillRect(x, y, w, h);
-
-      ctx.strokeStyle = "rgba(140,255,205,0.18)";
-      ctx.strokeRect(x, y, w, h);
-
-      ctx.font = "9px Courier New";
-      ctx.fillStyle = "rgba(220,255,244,0.55)";
-      ctx.fillText(String(p.posIndex), x + w - 5, y + h + 9);
+    for (const p of papers){
+      const v=worldToView(p.x,p.y);
+      const w=10,h=8,x=v.x-w/2,y=v.y-h/2;
+      ctx.fillStyle=p.logged?"rgba(245,245,235,0.35)":"rgba(245,245,235,0.55)";
+      ctx.fillRect(x,y,w,h);
+      ctx.strokeStyle="rgba(140,255,205,0.18)";
+      ctx.strokeRect(x,y,w,h);
+      ctx.font="9px Courier New";
+      ctx.fillStyle="rgba(220,255,244,0.55)";
+      ctx.fillText(String(p.posIndex),x+w-5,y+h+9);
     }
   }
 
   function drawPlayer() {
-    const v = worldToView(player.x, player.y);
-    ctx.strokeStyle = "rgba(150,255,190,0.95)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.arc(v.x, v.y, player.r, 0, Math.PI*2);
-    ctx.stroke();
+    const v=worldToView(player.x,player.y);
+    ctx.strokeStyle="rgba(150,255,190,0.95)";
+    ctx.lineWidth=1;
+    ctx.beginPath();ctx.arc(v.x,v.y,player.r,0,Math.PI*2);ctx.stroke();
 
-    let fx=0, fy=0;
-    if (keys.has("w")) fy -= 1;
-    if (keys.has("s")) fy += 1;
-    if (keys.has("a")) fx -= 1;
-    if (keys.has("d")) fx += 1;
-    if (fx === 0 && fy === 0) fy = -1;
+    let fx=0,fy=0;
+    if(keys.has("w")||joy.dy<-0.1)fy-=1;
+    if(keys.has("s")||joy.dy>0.1)fy+=1;
+    if(keys.has("a")||joy.dx<-0.1)fx-=1;
+    if(keys.has("d")||joy.dx>0.1)fx+=1;
+    if(fx===0&&fy===0)fy=-1;
 
-    const len = 8;
-    const mag = Math.max(1, Math.hypot(fx, fy));
-    fx = (fx/mag)*len; fy = (fy/mag)*len;
-
-    ctx.beginPath();
-    ctx.moveTo(v.x, v.y);
-    ctx.lineTo(v.x + fx, v.y + fy);
-    ctx.stroke();
+    const len=8,mag=Math.max(1,Math.hypot(fx,fy));
+    fx=(fx/mag)*len;fy=(fy/mag)*len;
+    ctx.beginPath();ctx.moveTo(v.x,v.y);ctx.lineTo(v.x+fx,v.y+fy);ctx.stroke();
   }
 
   function drawInteractPrompt() {
     if (paused) return;
-    const p = nearestPaperInRange();
-    if (!p) return;
-    const pv = worldToView(p.x, p.y);
-    ctx.font = "14px Courier New";
-    ctx.fillStyle = "rgba(255,210,130,0.92)";
-    ctx.fillText("[E]", pv.x - 16, pv.y - 16);
+    const p=nearestPaperInRange();
+    if(!p)return;
+    const pv=worldToView(p.x,p.y);
+    ctx.font="14px Courier New";
+    ctx.fillStyle="rgba(255,210,130,0.92)";
+    ctx.fillText("[READ]",pv.x-22,pv.y-16);
+
+    // Light up the interact button
+    interactBtn.classList.add("lit");
+    return true;
   }
 
   function drawFlashlight() {
-    const v = worldToView(player.x, player.y);
-    const grd = ctx.createRadialGradient(v.x, v.y, 40, v.x, v.y, 210);
-    grd.addColorStop(0, "rgba(0,0,0,0.0)");
-    grd.addColorStop(0.55, "rgba(0,0,0,0.35)");
-    grd.addColorStop(1, "rgba(0,0,0,0.78)");
-    ctx.fillStyle = grd;
+    const v=worldToView(player.x,player.y);
+    const grd=ctx.createRadialGradient(v.x,v.y,40,v.x,v.y,210);
+    grd.addColorStop(0,"rgba(0,0,0,0.0)");
+    grd.addColorStop(0.55,"rgba(0,0,0,0.35)");
+    grd.addColorStop(1,"rgba(0,0,0,0.78)");
+    ctx.fillStyle=grd;
     ctx.fillRect(0,0,VIEW_W,VIEW_H);
   }
 
-  // ---------- Loop ----------
+  // ── Loop ─────────────────────────────────────────────────
   function update() {
     if (!paused) {
-      let vx=0, vy=0;
-      if (keys.has("w")) vy -= 1;
-      if (keys.has("s")) vy += 1;
-      if (keys.has("a")) vx -= 1;
-      if (keys.has("d")) vx += 1;
-
-      if (vx || vy) {
-        const mag = Math.hypot(vx, vy);
-        vx /= mag; vy /= mag;
-        moveAndCollide(vx * player.speed, vy * player.speed);
+      let vx=0,vy=0;
+      // keyboard
+      if(keys.has("w"))vy-=1;
+      if(keys.has("s"))vy+=1;
+      if(keys.has("a"))vx-=1;
+      if(keys.has("d"))vx+=1;
+      // joystick (additive, but cap to unit)
+      if(joy.active){
+        vx+=joy.dx;
+        vy+=joy.dy;
+      }
+      if(vx||vy){
+        const mag=Math.hypot(vx,vy);
+        vx=vx/mag;vy=vy/mag;
+        moveAndCollide(vx*player.speed,vy*player.speed);
       }
     }
-
-    handleInteract();
+    handleKeyInteract();
     updateCamera();
   }
 
@@ -650,20 +757,16 @@
     drawObstacles();
     drawPapers();
     drawPlayer();
-    drawInteractPrompt();
+    const near=drawInteractPrompt();
+    if(!near)interactBtn.classList.remove("lit");
     drawFlashlight();
   }
 
-  function loop() {
-    update();
-    render();
-    requestAnimationFrame(loop);
-  }
+  function loop(){ update(); render(); requestAnimationFrame(loop); }
   loop();
 
-  // Modal controls
-  window.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && modalBack.style.display === "block") closeModal();
+  window.addEventListener("keydown", e=>{
+    if(e.key==="Escape"&&modalBack.style.display==="block")closeModal();
   });
 })();
 </script>
